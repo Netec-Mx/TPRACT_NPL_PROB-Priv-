@@ -18,7 +18,7 @@ Para corregir, compara la palabra escrita con las palabras que ya vio y mide cu�
 
 Todo ocurre en el Windows Server, dentro de Visual Studio Code. No se consulta internet, ni una base de datos, ni otro sistema. Las sugerencias sirven para aprender: no confirman saldos, pagos, plazos ni decisiones del banco.
 
-Los programas ya están instalados. La lista está en [Prerequisitos.md](../Prerequisitos.md). Durante el taller no se instala software.
+Los programas ya están instalados. La lista está en [Prerequisitos.md](../Capitulo01/Prerequisitos.md). Durante el taller no se instala software.
 
 ## Objetivos de aprendizaje
 
