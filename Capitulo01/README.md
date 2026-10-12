@@ -7,237 +7,143 @@
 | Duración | 105 minutos |
 | Complejidad | Media |
 | Nivel de Bloom | Crear |
+| Sistema | Windows Server |
+| Herramienta | Visual Studio Code |
 
 ## Descripción general
 
-En esta práctica construirá una línea base reproducible de un asistente probabilístico para mensajes bancarios sintéticos. El asistente detectará errores ortográficos simples mediante frecuencia de palabras y distancia mínima de edición, y sugerirá la siguiente palabra mediante modelos unigramas y bigramas con suavizado aditivo.
+En esta práctica construirá un asistente de ejemplo para mensajes bancarios inventados. El asistente detecta errores de escritura sencillos, propone la palabra corregida y sugiere cómo podría continuar la frase.
 
-El sistema se ejecutará completamente en local, sin API, base de datos, contenedor ni servidor externo. Las sugerencias serán demostrativas: no deben utilizarse para comunicar estados operativos, importes, plazos o decisiones bancarias reales.
+Para corregir, compara la palabra escrita con las palabras que ya vio y mide cuántos cambios harían falta para llegar a una palabra conocida. Para sugerir la continuación, calcula qué palabra suele ir después de la anterior.
+
+Todo ocurre en el Windows Server, dentro de Visual Studio Code. No se consulta internet, ni una base de datos, ni otro sistema. Las sugerencias sirven para aprender: no confirman saldos, pagos, plazos ni decisiones del banco.
+
+Los programas ya están instalados. La lista está en [Prerequisitos.md](../Prerequisitos.md). Durante el taller no se instala software.
 
 ## Objetivos de aprendizaje
 
 Al finalizar la práctica, podrá:
 
-- [ ] Preparar, normalizar, tokenizar y separar reproduciblemente un corpus sintético de mensajes bancarios.
-- [ ] Construir un corrector basado en candidatos a una edición y probabilidades unigramas.
-- [ ] Implementar modelos unigramas y bigramas con marcadores `<s>`, `</s>`, suavizado de Laplace y `<UNK>`.
-- [ ] Calcular probabilidad de secuencias, cobertura de vocabulario, exactitud de sugerencias y perplejidad.
-- [ ] Integrar corrección y autocompletado en la función `asistente_bancario(mensaje, top_k=3)` y documentar limitaciones de uso.
+- [ ] Preparar un conjunto de mensajes inventados, ordenarlos en palabras y separarlos en dos grupos repetibles: uno para enseñar al asistente y otro para probarlo.
+- [ ] Construir un corrector que proponga palabras conocidas a un solo cambio de distancia y las ordene por qué tan frecuentes son.
+- [ ] Calcular qué tan probable es una palabra y qué tan probable es que una palabra siga a otra, incluyendo palabras nuevas o poco vistas.
+- [ ] Medir si el asistente cubre las palabras de prueba, cuántas correcciones acierta y qué tan "sorprendido" queda ante una frase.
+- [ ] Unir corrección y sugerencia de la siguiente palabra en una sola función, y dejar escritas las limitaciones de uso.
 
-## Requisitos previos
+## Cómo está organizado el trabajo
 
-### Conocimientos
+Trabajará con tres piezas. Conviene reconocerlas antes de empezar:
 
-- Frecuencias y probabilidades de palabras.
-- Probabilidad condicional.
-- Distancia mínima de edición.
-- Modelos de lenguaje n-grama.
-- Suavizado aditivo.
-- Manejo de palabras fuera del vocabulario.
-- Perplejidad.
-- Python básico: listas, diccionarios, funciones, comprensión de listas y arreglos.
-- Uso elemental de JupyterLab.
+| Pieza | Qué es | Dónde la verá |
+|---|---|---|
+| Explorador | La lista de carpetas y archivos | Barra izquierda de Visual Studio Code |
+| Terminal | El panel donde se escriben comandos cortos | Parte inferior. El título debe decir PowerShell |
+| Cuaderno | Un archivo donde se alternan explicaciones, código y resultados | `01_asistente_probabilistico_bancario.ipynb` |
 
-### Acceso y condiciones
+Un **comando** es una instrucción de una línea. Se escribe en la terminal y se confirma con Enter. En este taller los comandos solo crean la carpeta de trabajo y comprueban que Python responde.
 
-- Computadora de 64 bits con al menos 2 núcleos a 2.0 GHz.
-- Memoria RAM mínima de 8 GB; se recomiendan 16 GB.
-- Al menos 5 GB libres en disco.
-- Resolución mínima de 1366x768.
-- Conexión a Internet solo para la instalación inicial.
-- Python 3.12.1 y Git 2.43.0 instalados o disponibles en su organización.
-- Permisos de escritura en el directorio personal del usuario.
+El **código Python** no se escribe en la terminal. Se pega en una celda del cuaderno y se ejecuta con el triángulo que aparece a la izquierda de esa celda.
 
-> **Nota de seguridad:** esta práctica usa exclusivamente mensajes sintéticos. No copie mensajes reales de clientes, números de cuenta, tarjetas, identificadores, contraseñas, códigos OTP, importes ni información operativa en el corpus, notebook, resultados o repositorio Git.
+Una **celda** es un recuadro del cuaderno. Hay celdas de texto (Markdown) y celdas de código (Python).
 
-## Entorno de la práctica
+## Cómo ejecutar cada bloque de código
 
-### Software objetivo
+Repita estos cinco pasos con cada bloque Python de la guía:
 
-| Componente | Versión objetivo |
-|---|---:|
-| Python | 3.12.1 |
-| pip | 23.3.2 |
-| venv | 3.12.1 |
-| JupyterLab | 4.1.0 |
-| notebook | 7.1.0 |
-| ipykernel | 6.29.0 |
-| NumPy | 1.26.4 |
-| pandas | 2.2.0 |
-| matplotlib | 3.8.2 |
-| scikit-learn | 1.4.0 |
-| Git | 2.43.0 |
+1. En la barra del cuaderno, pulse **+ Código** (+ Code).
+2. Copie el bloque de la guía.
+3. Péguelo en la celda vacía.
+4. Pulse el triángulo **Ejecutar celda** a la izquierda de la celda. También vale Mayús+Enter (Shift+Enter).
+5. Lea el resultado debajo de la celda.
 
-### Parámetros no aplicables
+Ejecute las celdas de arriba hacia abajo. Cada una usa lo que calcularon las anteriores. Si debajo de una celda aparece un texto en rojo, deténgase y vaya a [Resolución de problemas](#resolución-de-problemas). No continúe con las celdas siguientes hasta que esa celda muestre un resultado normal.
 
-| Parámetro | Estado |
-|---|---|
-| Base de datos | No aplicable |
-| Puerto de base de datos | No aplicable |
-| Contenedor Docker | No aplicable |
-| Servidor externo | No aplicable |
-| API de terceros | No aplicable |
-| Acceso remoto a JupyterLab | Prohibido |
-
-### Preparación inicial del proyecto
-
-Todos los comandos y notebooks deben ejecutarse desde el directorio raíz obligatorio.
-
-#### Linux o macOS
-
-```bash
-mkdir -p ~/taller-pln-probabilistico
-cd ~/taller-pln-probabilistico
-
-mkdir -p data/raw data/processed notebooks src results tests docs
-
-python3.12 -m venv .venv
-source .venv/bin/activate
-
-python -m pip install --upgrade pip==23.3.2
-python -m pip install \
-  jupyterlab==4.1.0 \
-  notebook==7.1.0 \
-  ipykernel==6.29.0 \
-  numpy==1.26.4 \
-  pandas==2.2.0 \
-  matplotlib==3.8.2 \
-  scikit-learn==1.4.0
-
-python -m ipykernel install --user \
-  --name nlp-bancario-py312 \
-  --display-name "Python 3.12 (nlp-bancario-py312)"
-
-git init
-```
-
-#### Windows PowerShell
-
-```powershell
-mkdir $env:USERPROFILE\taller-pln-probabilistico
-cd $env:USERPROFILE\taller-pln-probabilistico
-
-mkdir data, data\raw, data\processed, notebooks, src, results, tests, docs
-
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-python -m pip install --upgrade pip==23.3.2
-python -m pip install `
-  jupyterlab==4.1.0 `
-  notebook==7.1.0 `
-  ipykernel==6.29.0 `
-  numpy==1.26.4 `
-  pandas==2.2.0 `
-  matplotlib==3.8.2 `
-  scikit-learn==1.4.0
-
-python -m ipykernel install --user `
-  --name nlp-bancario-py312 `
-  --display-name "Python 3.12 (nlp-bancario-py312)"
-
-git init
-```
-
-Si PowerShell bloquea la activación del entorno, ejecute una vez:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Cree además un archivo `.gitignore` desde el directorio raíz:
-
-```bash
-cat > .gitignore <<'EOF'
-.venv/
-__pycache__/
-.ipynb_checkpoints/
-*.pyc
-results/*.png
-EOF
-```
-
-En Windows PowerShell, puede crear el mismo archivo con:
-
-```powershell
-@"
-.venv/
-__pycache__/
-.ipynb_checkpoints/
-*.pyc
-results/*.png
-"@ | Set-Content .gitignore
-```
+> **Nota de seguridad:** use solo los mensajes de esta guía. No copie mensajes reales de clientes, números de cuenta, tarjetas, identificadores, contraseñas, códigos de un solo uso, importes ni información operativa.
 
 ## Procedimiento paso a paso
 
-### Paso 1. Verificar la estructura y crear el notebook principal
+### Paso 1. Crear la carpeta de trabajo y el cuaderno
 
-**Objetivo:** confirmar que el proyecto cumple la estructura obligatoria y crear el notebook principal de la práctica.
+**Objetivo:** dejar una carpeta con el nombre esperado y abrir el cuaderno en Visual Studio Code.
 
 **Instrucciones:**
 
-1. Desde la raíz `~/taller-pln-probabilistico` o `%USERPROFILE%\taller-pln-probabilistico`, verifique el intérprete activo:
+1. Abra Visual Studio Code en el Windows Server.
 
-   ```bash
+2. Abra la terminal. En el menú superior elija **Terminal > Nueva terminal** (Terminal > New Terminal).
+
+   Si el panel no dice **PowerShell**, pulse la flecha que está junto al signo **+** del panel y elija **PowerShell**.
+
+3. El siguiente comando crea la carpeta del taller dentro de su usuario. No instala nada. Escríbalo y pulse Enter.
+
+   ```powershell
+   mkdir $env:USERPROFILE\taller-pln-probabilistico
+   ```
+
+   Si el mensaje indica que la carpeta ya existe, continúe con el paso siguiente.
+
+4. Este comando entra en esa carpeta. Después de Enter, la ruta de la terminal debe terminar en `taller-pln-probabilistico`.
+
+   ```powershell
+   cd $env:USERPROFILE\taller-pln-probabilistico
+   ```
+
+5. Este comando crea las carpetas internas del ejercicio: datos, cuaderno, resultados y notas.
+
+   ```powershell
+   mkdir data, data\raw, data\processed, notebooks, src, results, tests, docs
+   ```
+
+6. Este comando pregunta qué Python hay en el equipo. Debe responder `Python 3.12.1`. Si el texto es otro, o si PowerShell dice que no reconoce `python`, avise a quien preparó el servidor. No instale nada.
+
+   ```powershell
    python --version
    ```
 
-2. Verifique que el entorno virtual esté activo. La consola debe mostrar normalmente el prefijo `(.venv)`.
+7. Abra esa carpeta en Visual Studio Code: **Archivo > Abrir carpeta** (File > Open Folder). Elija `taller-pln-probabilistico`, dentro de su carpeta de usuario. Si aparece una pregunta sobre confiar en los archivos, pulse **Sí** (Yes). Es la carpeta que acaba de crear.
 
-3. Cree el notebook obligatorio:
+8. En el explorador de la izquierda debe ver `data`, `notebooks`, `src`, `results`, `tests` y `docs`. Si no aparecen, pulse el icono de actualizar del explorador.
 
-   ```bash
-   jupyter lab --ip=127.0.0.1 --port=8888 --no-browser
-   ```
-
-4. Abra en el navegador la URL local:
-
-   ```text
-   http://127.0.0.1:8888/lab
-   ```
-
-5. En JupyterLab, cree un notebook Python dentro de `notebooks` con el nombre exacto:
+9. Pulse con el botón derecho la carpeta `notebooks` y elija **Nuevo archivo** (New File). Escriba exactamente este nombre y pulse Enter:
 
    ```text
    01_asistente_probabilistico_bancario.ipynb
    ```
 
-6. Seleccione el kernel:
+   Visual Studio Code abre el cuaderno. Arriba a la derecha pulse **Seleccionar kernel** (Select Kernel) y elija **Python 3.12**. El kernel es el programa que ejecuta las celdas. Si no aparece, avise a quien preparó el equipo.
 
-   ```text
-   Python 3.12 (nlp-bancario-py312)
-   ```
+10. Pulse **+ Markdown** para crear una celda de texto. Escriba:
 
-7. En la primera celda Markdown del notebook, escriba:
+    ```markdown
+    # Asistente probabilístico bancario
 
-   ```markdown
-   # Asistente probabilístico bancario
+    Mensajes inventados. No contienen ni deben contener información bancaria real.
+    ```
 
-   Corpus sintético. No contiene ni debe contener información bancaria real.
-   ```
-
-8. Guarde el notebook.
+11. Guarde con **Archivo > Guardar** o con Ctrl+S.
 
 **Resultado esperado:**
 
-- JupyterLab se ejecuta solamente en `127.0.0.1:8888`.
+- El explorador muestra la carpeta `taller-pln-probabilistico` y sus subcarpetas.
 - Existe el archivo `notebooks/01_asistente_probabilistico_bancario.ipynb`.
-- El kernel seleccionado es `nlp-bancario-py312`.
+- El kernel del cuaderno es Python 3.12.
 
 **Verificación:**
 
-Ejecute esta celda en el notebook:
+Pegue este bloque en una celda de código y ejecútelo. Comprueba que el cuaderno está dentro de la carpeta correcta. En Visual Studio Code la celda a veces se ejecuta desde `notebooks`; el bloque sube un nivel cuando hace falta.
 
 ```python
 from pathlib import Path
 import sys
 
 ROOT = Path.cwd().resolve()
+if ROOT.name == "notebooks":
+    ROOT = ROOT.parent
 
 if ROOT.name != "taller-pln-probabilistico":
     raise RuntimeError(
-        f"Ejecute JupyterLab desde la raíz del proyecto. Directorio actual: {ROOT}"
+        "Abra en Visual Studio Code la carpeta taller-pln-probabilistico. "
+        f"Directorio actual: {Path.cwd()}"
     )
 
 for ruta in [
@@ -256,18 +162,17 @@ print("Raíz del proyecto:", ROOT)
 print("Estructura obligatoria verificada.")
 ```
 
-La salida debe indicar Python 3.12.x y la ruta raíz del proyecto.
+Debe imprimir una versión `3.12` y una ruta de Windows que termine en `taller-pln-probabilistico`.
 
 ---
 
-### Paso 2. Crear y cargar el corpus sintético
+### Paso 2. Crear y cargar los mensajes de ejemplo
 
-**Objetivo:** crear un corpus local, sintético y no sensible de mensajes bancarios para entrenar y evaluar el asistente.
+**Objetivo:** guardar en un archivo una lista de mensajes bancarios inventados. Esos mensajes son el material con el que el asistente aprende qué palabras son frecuentes.
 
 **Instrucciones:**
 
-1. Inserte una nueva celda de código en el notebook.
-2. Ejecute el siguiente código para crear `data/raw/mensajes_bancarios.csv`.
+1. Cree una celda de código y ejecute este bloque. Crea el archivo `data/raw/mensajes_bancarios.csv`.
 
 ```python
 import pandas as pd
@@ -331,7 +236,9 @@ print(f"Mensajes: {len(df_corpus)}")
 display(df_corpus.head())
 ```
 
-3. Cargue el archivo desde disco, en lugar de continuar trabajando con el objeto creado en memoria:
+Debajo de la celda debe verse la ruta del archivo, la cantidad de mensajes y una tabla con las primeras filas. La tabla es la forma en que el cuaderno muestra filas y columnas.
+
+2. Este bloque vuelve a leer el archivo desde el disco, para trabajar con lo guardado y no solo con lo que está en memoria.
 
 ```python
 df = pd.read_csv(
@@ -347,7 +254,7 @@ print("Forma del corpus:", df.shape)
 display(df.sample(5, random_state=42))
 ```
 
-4. Explore longitudes y duplicados:
+3. Este bloque cuenta caracteres y marca los mensajes repetidos a propósito.
 
 ```python
 df["longitud_caracteres"] = df["mensaje"].str.len()
@@ -359,14 +266,12 @@ print("Mensajes duplicados controlados:", int(df["duplicado"].sum()))
 
 **Resultado esperado:**
 
-- Se crea `data/raw/mensajes_bancarios.csv`.
-- El corpus contiene al menos 50 mensajes sintéticos.
-- Las columnas `id_mensaje`, `mensaje` y `origen` están presentes.
-- Todos los registros tienen `origen = sintetico`.
+- Existe `data/raw/mensajes_bancarios.csv`. Puede abrirlo desde el explorador para ver el texto.
+- Hay al menos 50 mensajes.
+- Cada fila tiene `id_mensaje`, `mensaje` y `origen`.
+- En todas las filas, `origen` vale `sintetico`.
 
 **Verificación:**
-
-Ejecute:
 
 ```python
 assert len(df) >= 50
@@ -377,17 +282,19 @@ assert not df["mensaje"].str.contains(
 print("Verificación de corpus sintético completada.")
 ```
 
-> El detector anterior es deliberadamente simple. En un entorno real, los filtros de seguridad deben ser mucho más completos y estar alineados con las políticas de protección de datos de la organización.
+> Esta revisión solo busca números muy largos. En un proceso real, los controles de seguridad son más amplios y siguen la política de protección de datos de la organización.
 
 ---
 
-### Paso 3. Normalizar, tokenizar y separar entrenamiento/prueba
+### Paso 3. Pasar los mensajes a palabras y separarlos en dos grupos
 
-**Objetivo:** preparar el texto preservando caracteres relevantes del español y signos básicos, y crear una separación reproducible de entrenamiento y prueba.
+**Objetivo:** dejar el texto en minúsculas, conservar tildes y eñes, separar palabras y signos, y guardar dos grupos fijos: entrenamiento y prueba.
+
+Entrenamiento es el grupo con el que el asistente cuenta palabras. Prueba es el grupo que se reserva para medir después, sin usarlo para enseñar.
 
 **Instrucciones:**
 
-1. Añada una celda con las funciones de normalización y tokenización.
+1. Añada una celda con las funciones que limpian y separan el texto.
 
 ```python
 import re
@@ -416,7 +323,7 @@ def tokens_lexicos(tokens: list[str]) -> list[str]:
     return [token for token in tokens if token.isalpha()]
 ```
 
-2. Aplique las funciones al corpus:
+2. Aplique esas funciones a todos los mensajes:
 
 ```python
 df["texto_normalizado"] = df["mensaje"].map(normalizar_texto)
@@ -426,7 +333,7 @@ df["tokens_lexicos"] = df["tokens"].map(tokens_lexicos)
 display(df[["mensaje", "texto_normalizado", "tokens"]].head(8))
 ```
 
-3. Separe los datos con una semilla fija:
+3. Separe los mensajes. El número `42` es una semilla: hace que la separación sea la misma cada vez que se ejecuta el cuaderno de arriba hacia abajo.
 
 ```python
 train_df, test_df = train_test_split(
@@ -443,7 +350,7 @@ print("Mensajes de entrenamiento:", len(train_df))
 print("Mensajes de prueba:", len(test_df))
 ```
 
-4. Guarde las particiones procesadas:
+4. Guarde los dos grupos en archivos:
 
 ```python
 PROCESSED_DIR = ROOT / "data" / "processed"
@@ -453,7 +360,7 @@ train_df.to_csv(PROCESSED_DIR / "train.csv", index=False, encoding="utf-8")
 test_df.to_csv(PROCESSED_DIR / "test.csv", index=False, encoding="utf-8")
 ```
 
-5. Registre la convención usada en `docs/convenciones.md`:
+5. Guarde una nota con las reglas usadas, para que otra persona pueda repetir el ejercicio:
 
 ```python
 convenciones = """# Convenciones de la práctica
@@ -476,11 +383,11 @@ print("Convenciones documentadas.")
 
 **Resultado esperado:**
 
-- Los textos están en minúsculas.
-- Los acentos y la `ñ` se preservan.
-- Los signos se representan como tokens independientes.
-- La separación se puede reproducir usando `random_state=42`.
-- Existen los archivos `data/processed/train.csv`, `data/processed/test.csv` y `docs/convenciones.md`.
+- Los textos quedan en minúsculas.
+- Las tildes y la `ñ` se mantienen.
+- Los signos quedan como piezas separadas.
+- La separación se repite gracias a `random_state=42`.
+- Existen `data/processed/train.csv`, `data/processed/test.csv` y `docs/convenciones.md`.
 
 **Verificación:**
 
@@ -501,13 +408,13 @@ print("Normalización, tokenización y partición verificadas.")
 
 ---
 
-### Paso 4. Construir vocabulario, frecuencias y corrector ortográfico
+### Paso 4. Contar palabras y proponer correcciones
 
-**Objetivo:** implementar un corrector que genere candidatos mediante eliminación, inserción, sustitución y transposición, y los ordene por probabilidad unigram.
+**Objetivo:** armar un corrector que genere palabras parecidas (quitando, agregando, cambiando o intercambiando una letra) y se quede con las que ya conoce, ordenadas de la más frecuente a la menos frecuente.
 
 **Instrucciones:**
 
-1. Cree frecuencias a partir de los tokens léxicos del conjunto de entrenamiento:
+1. Cuente las palabras del grupo de entrenamiento:
 
 ```python
 from collections import Counter
@@ -533,7 +440,9 @@ print("Palabras más frecuentes:")
 print(frecuencias_palabras.most_common(10))
 ```
 
-2. Implemente la distancia de Levenshtein con transposición. La transposición permite tratar casos como `trasnferencia` → `transferencia`.
+La lista final son las diez palabras que más se repiten. El corrector prefiere esas palabras cuando hay varias correcciones posibles.
+
+2. Mida la distancia entre dos palabras. Un intercambio de letras vecinas cuenta como un solo cambio. Así, `trasnferencia` está a un cambio de `transferencia`.
 
 ```python
 def distancia_damerau_levenshtein(a: str, b: str) -> int:
@@ -572,7 +481,7 @@ def distancia_damerau_levenshtein(a: str, b: str) -> int:
     return matriz[-1][-1]
 ```
 
-3. Implemente las operaciones de edición a una distancia:
+3. Genere todas las palabras a un solo cambio:
 
 ```python
 ALFABETO_ESP = "abcdefghijklmnopqrstuvwxyzáéíóúüñ"
@@ -609,7 +518,7 @@ def ediciones_uno(palabra: str) -> set[str]:
     return eliminaciones | transposiciones | sustituciones | inserciones
 ```
 
-4. Cree funciones para obtener candidatos conocidos y proponer una corrección:
+4. Quédese solo con las palabras conocidas y ordénelas:
 
 ```python
 def es_token_protegido(token: str) -> bool:
@@ -658,7 +567,7 @@ def corregir_token(token: str) -> str:
     return sugerir_correccion(token, top_k=1)[0][0]
 ```
 
-5. Pruebe las erratas solicitadas:
+5. Pruebe cuatro errores de escritura:
 
 ```python
 for errata in ["trasnferencia", "tarjetaa", "disponibel", "prosesada"]:
@@ -667,10 +576,10 @@ for errata in ["trasnferencia", "tarjetaa", "disponibel", "prosesada"]:
 
 **Resultado esperado:**
 
-- `trasnferencia` debe proponer `transferencia` como primer candidato si la palabra aparece en entrenamiento.
-- `tarjetaa` debe proponer `tarjeta`.
-- `disponibel` debe proponer `disponible`.
-- Los candidatos se ordenan usando frecuencia/probabilidad unigram, no solo similitud ortográfica.
+- `trasnferencia` propone primero `transferencia`, si esa palabra quedó en el grupo de entrenamiento.
+- `tarjetaa` propone `tarjeta`.
+- `disponibel` propone `disponible`.
+- El orden sale de la frecuencia, no solo del parecido de las letras.
 
 **Verificación:**
 
@@ -682,17 +591,19 @@ assert sugerir_correccion("123456")[0][0] == "123456"
 print("Corrector básico verificado.")
 ```
 
-> **Limitación importante:** el corrector no comprende la intención. Si dos palabras válidas son cercanas, la frecuencia puede favorecer una corrección incorrecta. En producción, un candidato debe combinarse con contexto, reglas de negocio y revisión humana.
+> El corrector no entiende la intención de la frase. Si dos palabras válidas se parecen, puede elegir la más frecuente aunque no sea la adecuada. En un uso real, la propuesta se combina con el contexto, con reglas del negocio y con la revisión de una persona.
 
 ---
 
-### Paso 5. Construir el modelo bigrama con `<UNK>` y suavizado
+### Paso 5. Calcular qué palabra suele seguir a otra
 
-**Objetivo:** entrenar un modelo bigrama capaz de asignar probabilidades a secuencias y manejar palabras raras o no observadas.
+**Objetivo:** estimar la probabilidad de que una palabra venga después de otra. Las palabras que aparecieron una sola vez, o que no aparecieron, se tratan como una misma etiqueta: `<UNK>` (desconocida). El inicio de la frase se marca con `<s>` y el final con `</s>`.
+
+Sin un ajuste, una combinación nunca vista vale cero y anula toda la frase. El suavizado de Laplace suma una cantidad pequeña (`k = 1`) para que toda combinación posible conserve una probabilidad mayor que cero.
 
 **Instrucciones:**
 
-1. Defina el vocabulario del modelo de lenguaje. Las palabras con frecuencia menor o igual a 1 se reemplazarán por `<UNK>`:
+1. Defina el vocabulario. Las palabras con frecuencia 1 o menor pasan a `<UNK>`:
 
 ```python
 UMBRAL_RAREZA = 1
@@ -711,7 +622,7 @@ print("Vocabulario LM:", len(vocabulario_lm))
 print("Vocabulario de predicción:", len(vocabulario_prediccion))
 ```
 
-2. Cree una función para reemplazar palabras raras o desconocidas:
+2. Prepare cada frase con las marcas de inicio, fin y palabra desconocida:
 
 ```python
 def mapear_unk(palabra: str) -> str:
@@ -724,7 +635,7 @@ def preparar_secuencia_lm(tokens: list[str]) -> list[str]:
     return ["<s>"] + palabras_mapeadas + ["</s>"]
 ```
 
-3. Calcule conteos unigramas de contexto y bigramas:
+3. Cuente cada par de palabras seguidas en el grupo de entrenamiento:
 
 ```python
 conteos_contexto = Counter()
@@ -742,7 +653,9 @@ print("Cantidad de bigramas observados:", len(conteos_bigramas))
 print("Ejemplos de bigramas:", conteos_bigramas.most_common(10))
 ```
 
-4. Implemente probabilidades con y sin suavizado:
+Un bigrama es un par: la palabra anterior y la palabra actual. La lista final muestra los pares más repetidos.
+
+4. Calcule la probabilidad del par con suavizado y sin suavizado:
 
 ```python
 def probabilidad_bigrama(
@@ -771,7 +684,7 @@ def probabilidad_bigrama_sin_suavizado(anterior: str, actual: str) -> float:
     return conteos_bigramas[(anterior, actual)] / denominador
 ```
 
-5. Compare un bigrama observado y uno no observado:
+5. Compare un par habitual con uno que el entrenamiento no vio:
 
 ```python
 ejemplos_bigramas = [
@@ -794,10 +707,10 @@ for anterior, actual in ejemplos_bigramas:
 
 **Resultado esperado:**
 
-- El token `<UNK>` forma parte del vocabulario del modelo.
-- Un bigrama no observado tiene probabilidad `0.0` sin suavizado.
-- Con `k=1.0`, todo bigrama posible del vocabulario de predicción recibe una probabilidad positiva.
-- Los marcadores `<s>` y `</s>` participan en la probabilidad de cada mensaje.
+- `<UNK>` forma parte del vocabulario.
+- Un par nunca visto vale `0.0` sin suavizado.
+- Con `k = 1.0`, ese mismo par vale más que cero.
+- `<s>` y `</s>` entran en la cuenta de cada mensaje.
 
 **Verificación:**
 
@@ -814,13 +727,15 @@ print("Modelo bigrama y suavizado verificados.")
 
 ---
 
-### Paso 6. Calcular probabilidad, perplejidad y autocompletado
+### Paso 6. Medir las frases y sugerir la palabra siguiente
 
-**Objetivo:** medir la plausibilidad de secuencias y sugerir las palabras más probables dado un contexto final.
+**Objetivo:** asignar una probabilidad a una frase completa, resumir esa probabilidad con la perplejidad y proponer las tres continuaciones más probables.
+
+La perplejidad es un resumen: un número bajo indica que la frase se parece a las que el asistente ya vio; un número alto indica que la frase le resulta poco habitual. Sin suavizado, una sola combinación nunca vista deja la perplejidad en infinito.
 
 **Instrucciones:**
 
-1. Implemente la probabilidad de una secuencia usando logaritmos para evitar desbordamiento numérico:
+1. Calcule la probabilidad y la perplejidad con suavizado. Se usan logaritmos para que el producto de muchas probabilidades pequeñas no se vuelva cero por un límite del computador.
 
 ```python
 import math
@@ -850,7 +765,7 @@ def perplejidad_mensaje(tokens: list[str], k: float = K_SUAVIZADO) -> float:
     return math.exp(-log_prob / numero_predicciones)
 ```
 
-2. Implemente la perplejidad sin suavizado para comparar el efecto de bigramas no observados:
+2. Calcule la misma medida sin suavizado, para ver el efecto de un par nunca visto:
 
 ```python
 def perplejidad_sin_suavizado(tokens: list[str]) -> float:
@@ -867,7 +782,7 @@ def perplejidad_sin_suavizado(tokens: list[str]) -> float:
     return math.exp(-log_prob / len(probabilidades))
 ```
 
-3. Implemente el autocompletado. El modelo devuelve las palabras más probables después del último token léxico:
+3. Proponga la palabra siguiente a partir de la última palabra de la frase:
 
 ```python
 def ultimo_token_lexico(texto: str) -> str:
@@ -895,7 +810,7 @@ def sugerir_siguiente_palabra(contexto: str, top_k: int = 3) -> list[tuple[str, 
     return ranking[:top_k]
 ```
 
-4. Pruebe el autocompletado:
+4. Pruebe cuatro inicios de frase:
 
 ```python
 for contexto in [
@@ -909,7 +824,9 @@ for contexto in [
         print(f"  {palabra:15} {probabilidad:.4f}")
 ```
 
-5. Evalúe cobertura de vocabulario y perplejidad sobre prueba:
+Cada inicio debe mostrar tres palabras. La primera es la continuación más probable según los mensajes de entrenamiento.
+
+5. Mida, en el grupo de prueba, qué parte de las palabras ya se conocía y cuál es la perplejidad de cada mensaje:
 
 ```python
 def cobertura_vocabulario(df_evaluacion: pd.DataFrame) -> float:
@@ -941,10 +858,10 @@ display(resultados_perplejidad.head())
 
 **Resultado esperado:**
 
-- Cada contexto genera tres sugerencias ordenadas por probabilidad descendente.
-- La perplejidad con Laplace es finita para todos los mensajes no vacíos.
-- La perplejidad sin suavizado puede ser infinita si aparece al menos un bigrama no observado.
-- La cobertura está entre 0 y 1.
+- Cada frase de prueba ofrece tres sugerencias, de mayor a menor probabilidad.
+- La perplejidad con Laplace es un número finito en todos los mensajes que tienen palabras.
+- La perplejidad sin suavizado puede salir como `inf` cuando aparece un par no visto. Eso es el comportamiento previsto.
+- La cobertura es un porcentaje entre 0 % y 100 %.
 
 **Verificación:**
 
@@ -961,13 +878,13 @@ print("Probabilidades, perplejidad y autocompletado verificados.")
 
 ---
 
-### Paso 7. Integrar el asistente y generar pruebas controladas
+### Paso 7. Unir corrección y sugerencia, y probar diez frases
 
-**Objetivo:** integrar corrección y autocompletado en una única función y evaluar resultados con al menos diez mensajes alterados.
+**Objetivo:** dejar una sola función que reciba un mensaje, proponga el texto corregido y tres palabras para continuar. Después se prueba con diez frases alteradas a propósito.
 
 **Instrucciones:**
 
-1. Añada una función para reconstruir texto conservando el espaciado básico de signos:
+1. Reconstruya la frase cuidando el espacio de los signos:
 
 ```python
 def reconstruir_texto(tokens: list[str]) -> str:
@@ -986,7 +903,7 @@ def reconstruir_texto(tokens: list[str]) -> str:
     return texto.strip()
 ```
 
-2. Implemente la función integrada requerida:
+2. Defina la función del asistente:
 
 ```python
 def asistente_bancario(mensaje: str, top_k: int = 3) -> dict:
@@ -1017,7 +934,7 @@ def asistente_bancario(mensaje: str, top_k: int = 3) -> dict:
     }
 ```
 
-3. Cree una tabla de pruebas con diez mensajes alterados:
+3. Pruebe diez mensajes con un error cada uno:
 
 ```python
 pruebas_controladas = [
@@ -1083,7 +1000,7 @@ tabla_pruebas = pd.DataFrame(filas_prueba)
 display(tabla_pruebas)
 ```
 
-4. Calcule exactitud de corrección sobre las diez pruebas:
+4. Calcule qué porcentaje de esas diez correcciones apareció en el texto propuesto:
 
 ```python
 exactitud_corrector = tabla_pruebas["correccion_detectada"].mean()
@@ -1091,7 +1008,7 @@ exactitud_corrector = tabla_pruebas["correccion_detectada"].mean()
 print(f"Exactitud de corrección controlada: {exactitud_corrector:.2%}")
 ```
 
-5. Evalúe exactitud de autocompletado `@3` sobre bigramas de prueba:
+5. Mida cuántas veces la palabra real del grupo de prueba está entre las tres sugerencias:
 
 ```python
 def evaluar_autocompletado_top_k(
@@ -1122,7 +1039,9 @@ print(f"Predicciones evaluadas: {total_predicciones}")
 print(f"Exactitud de autocompletado @3: {exactitud_top3:.2%}")
 ```
 
-6. Guarde los resultados de evaluación:
+El texto `@3` significa "entre las tres primeras sugerencias".
+
+6. Guarde la tabla y las medidas en la carpeta `results`:
 
 ```python
 RESULTS_DIR = ROOT / "results"
@@ -1156,7 +1075,7 @@ pd.Series(metricas).to_json(
 print("Resultados guardados en results/.")
 ```
 
-7. Ejecute ejemplos integrados:
+7. Vea el asistente completo con tres ejemplos:
 
 ```python
 ejemplos_asistente = [
@@ -1175,10 +1094,10 @@ for mensaje in ejemplos_asistente:
 
 **Resultado esperado:**
 
-- Existe una tabla con diez casos alterados.
-- La función `asistente_bancario` devuelve una corrección propuesta y tres sugerencias.
-- Las métricas quedan almacenadas en `results/metricas.json`.
-- El asistente siempre indica que requiere revisión humana.
+- La tabla tiene diez frases alteradas.
+- `asistente_bancario` devuelve un texto propuesto y tres continuaciones.
+- Las medidas quedan en `results/metricas.json`.
+- Todas las respuestas indican que hace falta revisión humana.
 
 **Verificación:**
 
@@ -1197,7 +1116,7 @@ print("Integración del asistente verificada.")
 
 ## Validación y pruebas
 
-Ejecute las siguientes comprobaciones finales en una celda del notebook:
+Ejecute esta última comprobación en una celda de código:
 
 ```python
 import json
@@ -1217,7 +1136,7 @@ assert metricas_finales["perplejidad_laplace_promedio"] > 0
 print("Todas las validaciones finales fueron superadas.")
 ```
 
-Como evidencia mínima de entrega, confirme que existen los siguientes archivos:
+En el explorador, confirme que existen estos archivos:
 
 ```text
 data/raw/mensajes_bancarios.csv
@@ -1229,103 +1148,74 @@ results/pruebas_corrector.csv
 results/metricas.json
 ```
 
-Documente al final del notebook, en una celda Markdown, estas limitaciones:
+Al final del cuaderno, cree una celda Markdown y copie estas limitaciones:
 
-1. El corpus es pequeño, sintético y no representa todos los productos, canales ni situaciones bancarias.
-2. La frecuencia unigram puede favorecer palabras comunes aunque no sean correctas para el contexto.
-3. El corrector solo considera candidatos a una edición y puede fallar ante errores múltiples, nombres propios o abreviaturas.
-4. El bigrama considera únicamente una palabra previa; no comprende intención, políticas, estados transaccionales ni restricciones regulatorias.
-5. El suavizado evita probabilidades cero, pero puede asignar probabilidad positiva a secuencias poco plausibles.
-6. Una frase probable no es necesariamente verdadera, autorizada ni apta para comunicación externa.
-7. Está prohibido entrenar, probar o registrar este ejercicio con información bancaria real o datos personales.
-8. La aceptación, edición o descarte de toda sugerencia corresponde a una persona usuaria autorizada.
+1. Los mensajes son pocos, inventados, y no cubren todos los productos, canales ni situaciones del banco.
+2. La palabra más frecuente puede ganar aunque no encaje en la frase.
+3. El corrector solo prueba un cambio. Falla si hay varios errores, nombres propios o abreviaturas.
+4. La sugerencia mira solo la palabra anterior. No conoce la intención, las políticas, el estado de una transacción ni las normas.
+5. El suavizado evita el cero, y por eso también da probabilidad a frases poco reales.
+6. Una frase probable no es una frase verdadera, autorizada ni lista para enviarse.
+7. Está prohibido enseñar, probar o guardar este ejercicio con información bancaria real o con datos personales.
+8. Aceptar, editar o descartar una sugerencia corresponde a una persona autorizada.
 
 ## Resolución de problemas
 
-### 1. JupyterLab muestra otro kernel o aparece `ModuleNotFoundError`
+### 1. El cuaderno no ejecuta el código o no encuentra pandas
 
-**Síntoma:** el notebook no muestra `Python 3.12 (nlp-bancario-py312)` o falla al importar `pandas`, `numpy` o `sklearn`.
+**Qué se ve:** el botón de kernel dice otra versión de Python, o una celda muestra en rojo `ModuleNotFoundError` al usar `pandas`, `numpy` o `sklearn`.
 
-**Causa probable:** JupyterLab se abrió fuera del entorno `.venv`, las dependencias se instalaron en otro intérprete o el kernel no fue registrado correctamente.
+**Qué suele pasar:** Visual Studio Code está usando un Python distinto del que preparó tecnología.
 
-**Solución:**
+**Qué hacer:**
 
-1. Detenga JupyterLab con `Ctrl+C`.
-2. Active de nuevo el entorno virtual desde la raíz del proyecto.
-3. Verifique el intérprete:
+1. Arriba a la derecha del cuaderno, pulse el nombre del kernel y elija **Python 3.12**.
+2. En la terminal de PowerShell, dentro de la carpeta del taller, compruebe el programa disponible:
 
-   ```bash
+   ```powershell
    python --version
-   python -m pip --version
    ```
 
-4. Reinstale el kernel:
+   Debe decir `Python 3.12.1`.
 
-   ```bash
-   python -m ipykernel install --user \
-     --name nlp-bancario-py312 \
-     --display-name "Python 3.12 (nlp-bancario-py312)"
-   ```
+3. Vuelva a ejecutar las celdas desde la primera. En el cuaderno, abra el menú **...** de la barra y elija **Ejecutar todo** (Run All).
 
-5. Inicie JupyterLab nuevamente con:
+Si Python 3.12 no aparece en la lista, detenga el taller y pida la revisión del equipo. La instalación está descrita en [Prerequisitos.md](../Prerequisitos.md). No ejecute instaladores durante la práctica.
 
-   ```bash
-   jupyter lab --ip=127.0.0.1 --port=8888 --no-browser
-   ```
+### 2. El corrector deja la palabra igual, o la perplejidad sin suavizado sale infinita
 
-6. En el notebook, use **Kernel > Change Kernel** y seleccione `Python 3.12 (nlp-bancario-py312)`.
+**Qué se ve:** una palabra con error no cambia, no aparece la corrección esperada, o en la columna `perplejidad_sin_suavizado` se lee `inf`.
 
-### 2. El corrector no propone una palabra esperada o la perplejidad sin suavizado es infinita
+**Qué suele pasar:** la palabra correcta quedó en el grupo de prueba y el corrector no la conoce; el error necesita más de un cambio; o el par de palabras de la frase de prueba no apareció en el entrenamiento. Un valor `inf` sin suavizado es esperable en ese último caso.
 
-**Síntoma:** una errata conserva su forma original, no aparece el candidato esperado o se observa `inf` en `perplejidad_sin_suavizado`.
+**Qué hacer:**
 
-**Causa probable:** la palabra correcta no quedó en el conjunto de entrenamiento, no pertenece al vocabulario del corrector, el error necesita más de una edición o el bigrama de prueba no fue observado durante entrenamiento.
-
-**Solución:**
-
-1. Verifique que la palabra exista en el vocabulario:
+1. Compruebe si la palabra entró al vocabulario del corrector. Pegue esto en una celda de código:
 
    ```python
    print("transferencia" in vocabulario_corrector)
    print(frecuencias_palabras["transferencia"])
    ```
 
-2. Confirme que usa la misma semilla de partición:
+2. Confirme que la separación usa la semilla `random_state=42`, como en el paso 3.
+3. Ejecute de nuevo todas las celdas en orden con **Ejecutar todo** (Run All).
+4. Use la perplejidad con Laplace (`k = 1.0`) como resultado del taller. Conserve el infinito sin suavizado como contraste, no como fallo.
+5. Amplíe el ejercicio solo con mensajes inventados y revisados. No agregue datos reales para subir la cobertura.
 
-   ```python
-   random_state=42
-   ```
+## Cierre
 
-3. Ejecute nuevamente todas las celdas en orden con **Run > Run All Cells**.
-4. Mantenga `k=1.0` para calcular la perplejidad final; una perplejidad infinita sin suavizado es un comportamiento esperado ante bigramas no observados.
-5. No agregue datos reales para aumentar cobertura. Si necesita ampliar el ejercicio, agregue únicamente mensajes sintéticos revisados.
-
-## Limpieza
-
-1. Guarde el notebook y confirme que los resultados requeridos permanecen en `results/`.
-2. Opcionalmente, registre la línea base en Git:
-
-   ```bash
-   git add .
-   git commit -m "Lab 01 asistente probabilistico bancario"
-   ```
-
-3. Detenga JupyterLab con `Ctrl+C` en la terminal.
-4. Desactive el entorno virtual:
-
-   ```bash
-   deactivate
-   ```
-
-5. No elimine `data/`, `notebooks/`, `docs/` ni `results/`, ya que constituyen la línea base reutilizable para prácticas posteriores.
+1. Guarde el cuaderno con Ctrl+S.
+2. En el explorador, confirme que los archivos de `results` siguen ahí.
+3. Cierre la pestaña del cuaderno. Puede cerrar Visual Studio Code.
+4. Conserve las carpetas `data`, `notebooks`, `docs` y `results`. Son el resultado del taller y sirven para repetir la práctica.
 
 ## Resumen
 
-En esta práctica creó un asistente probabilístico local para mensajes bancarios sintéticos. Preparó un corpus con normalización y tokenización reproducibles, construyó un corrector ortográfico basado en frecuencia y distancia de edición, y entrenó un modelo bigrama con `<UNK>`, `<s>`, `</s>` y suavizado de Laplace.
+En esta práctica construyó, en Windows Server y con Visual Studio Code, un asistente local para mensajes bancarios inventados. Preparó esos mensajes, los separó en palabras y en dos grupos repetibles, armó un corrector por frecuencia y por cambios de letras, y calculó la palabra siguiente con pares de palabras, la etiqueta `<UNK>` y el suavizado de Laplace.
 
-También evaluó cobertura de vocabulario, exactitud de corrección, exactitud de autocompletado `@3` y perplejidad. El resultado es una línea base interpretable y auditable, útil para comprender modelos probabilísticos, pero insuficiente para tomar decisiones financieras o emitir comunicaciones sin reglas de negocio, filtros de seguridad y revisión humana.
+También midió la cobertura del vocabulario, los aciertos del corrector, los aciertos de las tres sugerencias y la perplejidad. El asistente ayuda a ver cómo funciona un modelo probabilístico. Una sugerencia suya no reemplaza las reglas del negocio, los controles de seguridad ni la revisión de una persona.
 
-### Recursos opcionales
+### Lecturas opcionales
 
 - Jurafsky y Martin, *Speech and Language Processing*: https://web.stanford.edu/~jurafsky/slp3/
 - NIST AI Risk Management Framework: https://www.nist.gov/itl/ai-risk-management-framework
