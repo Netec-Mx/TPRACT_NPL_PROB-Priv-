@@ -1218,6 +1218,4 @@ También midió la cobertura del vocabulario, los aciertos del corrector, los ac
 ### Lecturas opcionales
 
 - Jurafsky y Martin, *Speech and Language Processing*: https://web.stanford.edu/~jurafsky/slp3/
-- NIST AI Risk Management Framework: https://www.nist.gov/itl/ai-risk-management-framework
-- Reglamento General de Protección de Datos: https://eur-lex.europa.eu/eli/reg/2016/679/oj
-- OWASP Top 10 para aplicaciones de modelos de lenguaje: https://owasp.org/www-project-top-10-for-large-language-model-applications/
+
