@@ -2,11 +2,11 @@
   <img src="https://static.wixstatic.com/media/96edd2_934dddb3230b4b16b1d1c56c51143738~mv2.png" alt="Logo de Netec" width="300"/>
 </a>
 
-# Taller Práctico Procesamiento del lenguaje natural con modelos probabilísticos
+# NPL con modelos probabilísticos
 
 ## Plataforma de laboratorios
 
-Te damos la bienvenida a la **plataforma de laboratorios** del curso **Taller Práctico Procesamiento del lenguaje natural con modelos probabilísticos**. Aquí aplicarás técnicas de procesamiento del lenguaje natural para construir un asistente que corrija errores de escritura y sugiera cómo continuar mensajes bancarios sintéticos, mediante una práctica guiada con Python en Visual Studio Code.
+Te damos la bienvenida a la **plataforma de laboratorios** del curso **NPL con modelos probabilísticos**. Aquí aplicarás técnicas de procesamiento del lenguaje natural para construir un asistente que corrija errores de escritura y sugiera cómo continuar mensajes bancarios sintéticos, mediante una práctica guiada con Python en Visual Studio Code.
 
 ## Lista de laboratorios
 
